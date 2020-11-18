@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
+import argparse
 import glob
 import os
 import urllib.request
 import xml.etree.ElementTree as ET
 
-def update_super_manifest_file(super_manifest_file):
+def update_super_manifest_file(super_manifest_file, uri_prefix):
     print("Updating {}".format(super_manifest_file))
     super_manifest_tree = ET.parse(super_manifest_file)
     super_manifest_root = super_manifest_tree.getroot()
@@ -13,19 +14,22 @@ def update_super_manifest_file(super_manifest_file):
         remote_path = uri_element.text
         local_path = os.path.basename(remote_path)
         yield local_path, remote_path
-        uri_element.text = local_path
+        uri_text = uri_prefix + local_path if uri_prefix else local_path
+        uri_element.text = uri_text
     for manifest_element in super_manifest_root.iter('board-manifest'):
         remote_path = manifest_element.get('dependency-url')
         if remote_path is not None:
             local_path = os.path.basename(remote_path)
             yield local_path, remote_path
-            manifest_element.set('dependency-url', local_path)
+            uri_text = uri_prefix + local_path if uri_prefix else local_path
+            manifest_element.set('dependency-url', uri_text)
     for manifest_element in super_manifest_root.iter('middleware-manifest'):
         remote_path = manifest_element.get('dependency-url')
         if remote_path is not None:
             local_path = os.path.basename(remote_path)
             yield local_path, remote_path
-            manifest_element.set('dependency-url', local_path)
+            uri_text = uri_prefix + local_path if uri_prefix else local_path
+            manifest_element.set('dependency-url', uri_text)
     super_manifest_tree.write(super_manifest_file)
 
 def fetch_content_manifests(content_manifest_dict):
@@ -34,10 +38,13 @@ def fetch_content_manifests(content_manifest_dict):
         urllib.request.urlretrieve(remote_path, local_path)
 
 def main():
+    argParser = argparse.ArgumentParser()
+    argParser.add_argument("--uri-prefix", help="Base prefix to prepend to all manifest URIs", default=None)
+    args = argParser.parse_args()
     super_manifest_files = list(glob.glob("*super*.xml"))
     content_manifest_dict = dict()
     for super_manifest_file in super_manifest_files:
-        for local_path, remote_path in update_super_manifest_file(super_manifest_file):
+        for local_path, remote_path in update_super_manifest_file(super_manifest_file, args.uri_prefix):
             if local_path in content_manifest_dict:
                 assert(content_manifest_dict[local_path] == remote_path)
             else:
