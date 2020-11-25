@@ -6,6 +6,11 @@ import os
 import urllib.request
 import xml.etree.ElementTree as ET
 
+SUPER_MANIFEST_URIS=[
+    'https://github.com/cypresssemiconductorco/mtb-super-manifest/raw/v2.X/mtb-super-manifest.xml',
+    'https://github.com/cypresssemiconductorco/mtb-super-manifest/raw/v2.X/mtb-super-manifest-fv2.xml'
+]
+
 def update_super_manifest_file(super_manifest_file, uri_prefix):
     print("Updating {}".format(super_manifest_file))
     super_manifest_tree = ET.parse(super_manifest_file)
@@ -37,11 +42,18 @@ def fetch_content_manifests(content_manifest_dict):
         print("Pulling {} -> {}".format(remote_path, local_path ))
         urllib.request.urlretrieve(remote_path, local_path)
 
+def fetch_super_manifests():
+    for remote_path in SUPER_MANIFEST_URIS:
+        local_path = os.path.basename(remote_path)
+        print("Pulling {} -> {}".format(remote_path, local_path ))
+        urllib.request.urlretrieve(remote_path, local_path)
+        yield local_path
+
 def main():
     argParser = argparse.ArgumentParser()
     argParser.add_argument("--uri-prefix", help="Base prefix to prepend to all manifest URIs", default=None)
     args = argParser.parse_args()
-    super_manifest_files = list(glob.glob("*super*.xml"))
+    super_manifest_files = list(fetch_super_manifests())
     content_manifest_dict = dict()
     for super_manifest_file in super_manifest_files:
         for local_path, remote_path in update_super_manifest_file(super_manifest_file, args.uri_prefix):
