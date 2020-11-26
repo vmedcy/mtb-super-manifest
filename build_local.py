@@ -90,6 +90,7 @@ def retry(ExceptionToCheck, tries=4, delay=3, backoff=2, logger=None):
 @retry(ConnectionResetError, tries=10)
 def pull_manifest(remote_path, local_path):
     print("Pulling {} -> {}".format(remote_path, local_path ))
+    time.sleep(2)
     urllib.request.urlretrieve(remote_path, local_path)
 
 def update_super_manifest_file(super_manifest_file, uri_prefix):
